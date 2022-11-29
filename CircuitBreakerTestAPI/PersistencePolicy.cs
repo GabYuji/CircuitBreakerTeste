@@ -29,15 +29,15 @@ namespace CircuitBreakerTestAPI
                  .CircuitBreakerAsync(quantidadeTentativa, TimeSpan.FromSeconds(segundosEntreTentativas),
                  onBreak: (Exception, segundosEntreTentativas) =>
                  {
-                     Console.WriteLine("teste");
+                     logger.Error($" Ressubmissao da politica de persistencia durante onBreak | DataHora: {DateTime.Now:G} | Excecao: {Exception} ");
                  },
                  onReset: () =>
                  {
-                     Console.WriteLine("teste");
+                     logger.Error($" Ressubmissao da politica de persistencia durante onReset | DataHora: {DateTime.Now:G}");
                  },
                  onHalfOpen: () =>
                  {
-                     Console.WriteLine("teste");
+                     logger.Error($" Ressubmissao da politica de persistencia durante onHalfOpen | DataHora: {DateTime.Now:G}");
                  });
         }
     }

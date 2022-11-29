@@ -12,14 +12,9 @@ namespace CircuitBreakerTestAPI.Services
             _testeRepository = testeRepository;
         }
 
-        public async Task<Usuario> TesteUsuario()
+        public async Task<Usuario> TesteUsuario(Analise analise)
         {
-           return await _testeRepository.TesteUsuario();
-        }
-
-        public async Task<Usuario> TesteUsuarioSqlite()
-        {
-            return await _testeRepository.TesteUsuario();
+           return await _testeRepository.TesteUsuario(analise);
         }
     }
 }

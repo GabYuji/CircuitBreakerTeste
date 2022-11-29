@@ -6,6 +6,7 @@ using Dapper;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Polly.CircuitBreaker;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -20,26 +21,32 @@ namespace CircuitBreakerTestAPI.Respository
     public class TesteRepository : BaseRepository<Usuario, int>, ITesteRepository
     {
         private readonly PersistencePolicy _persistencePolicy;
-        public TesteRepository(IOptions<DatabaseAppSettingsOptions> options, PersistencePolicy persistencePolicy) : base(options)
+        private readonly ILogger _logger;
+        public TesteRepository(IOptions<DatabaseAppSettingsOptions> options,
+                               PersistencePolicy persistencePolicy,
+                               ILogger logger) : base(options)
         {
             _persistencePolicy = persistencePolicy;
+            _logger = logger;
         }
 
-        //public async Task<Usuario> TesteUsuario()
-        //{
-        //    if(_persistencePolicy.CircuitBreaker.CircuitState.Equals(CircuitState.Closed))
-        //        return await TesteUsuarioGabriel();
-        //    else if(_persistencePolicy.CircuitBreaker.CircuitState.Equals(CircuitState.Open))
-        //        return await TesteUsuarioYuji();
-
-        //    return null;
-        //}
-
-        public async Task<Usuario> TesteUsuario()
+        public async Task<bool> TesteUsuario(Analise analise)
         {
-            //await TesteCriarTabela();
+            if (_persistencePolicy.CircuitBreaker.CircuitState.Equals(CircuitState.Closed))
+                return await SalvarDadosSqlServer(analise);
+            else if (_persistencePolicy.CircuitBreaker.CircuitState.Equals(CircuitState.Open))
+                return false;
+            else if (_persistencePolicy.CircuitBreaker.CircuitState.Equals(CircuitState.HalfOpen))
+                return false;
 
-            await TesteInserirDados();
+            return false;
+        }
+
+        public async Task<Usuario> TesteUsuario(string cpf, int idUsuario)
+        {
+            await TesteCriarTabela();
+
+            await TesteInserirDados(cpf, idUsuario);
 
             await TesteSelecionaDados();
 
@@ -48,7 +55,7 @@ namespace CircuitBreakerTestAPI.Respository
 
         private async Task<Usuario> TesteUsuarioGabriel()
         {
-            return await _persistencePolicy.CircuitBreaker.ExecuteAsync<Usuario>(() => 
+            return await _persistencePolicy.CircuitBreaker.ExecuteAsync<Usuario>(() =>
                          _persistencePolicy.RetryPolicy.ExecuteAsync(() =>
                          {
                              try
@@ -69,7 +76,7 @@ namespace CircuitBreakerTestAPI.Respository
                                  FechaConexao();
                              }
                          }));
-            
+
         }
 
         private async Task<Usuario> TesteUsuarioYuji()
@@ -101,7 +108,7 @@ namespace CircuitBreakerTestAPI.Respository
             {
                 IniciarConexaoSqlite(false);
 
-               using (ComandoSqlite = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS ANALISES(DADOS TEXT)", ConexaoSqlite))
+                using (ComandoSqlite = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS ANALISES(DADOS TEXT)", ConexaoSqlite))
                 {
                     var result = ComandoSqlite.ExecuteNonQuery();
                 }
@@ -116,24 +123,24 @@ namespace CircuitBreakerTestAPI.Respository
             }
             catch (Exception ex)
             {
-
+                _logger.Error($"Erro ao realizar o insert. Exception: {ex}");
                 throw ex;
             }
             finally
             {
-                FechaConexaoSqlite();
+                FechaConexao();
             }
         }
 
-        private async Task<bool> TesteInserirDados()
+        private async Task<bool> TesteInserirDados(string cpf, int idUsuario)
         {
             try
             {
-                
+
                 IniciarConexaoSqlite(false);
 
                 Analise analise = new Analise();
-                analise.ID = 2;
+                analise.ID = 3;
                 analise.IdUsuario = 2;
                 analise.CPF = "40272123804";
 
@@ -153,7 +160,7 @@ namespace CircuitBreakerTestAPI.Respository
             }
             finally
             {
-                FechaConexaoSqlite();
+                FechaConexao();
             }
         }
 
@@ -173,7 +180,7 @@ namespace CircuitBreakerTestAPI.Respository
                 int i = 0;
                 while (DataReaderSqlite.Read())
                 {
-                     lista.Add(Convert.ToString(DataReaderSqlite.GetValue(0)));
+                    lista.Add(Convert.ToString(DataReaderSqlite.GetValue(0)));
                 }
 
                 try
@@ -206,7 +213,7 @@ namespace CircuitBreakerTestAPI.Respository
                     await Conexao.QueryFirstAsync(sql, analise);
                     FechaConexao();
                 }
-                
+
 
 
                 return null;
@@ -218,7 +225,30 @@ namespace CircuitBreakerTestAPI.Respository
             }
             finally
             {
-                FechaConexaoSqlite();
+                FechaConexao();
+            }
+        }
+        private async Task<bool> SalvarDadosSqlServer(Analise analise)
+        {
+            try
+            {
+                IniciarConexao(false);
+
+                var sql = @"INSERT INTO ANALISES(ID_USUARIO, CPF)
+                                          VALUES(@IdUsuario, @CPF)";
+
+                var result = await Conexao.QueryAsync<Dados>(sql, analise);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+            finally
+            {
+                FechaConexao();
             }
         }
     }

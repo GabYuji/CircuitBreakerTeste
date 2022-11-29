@@ -49,10 +49,7 @@ namespace CircuitBreakerTestAPI.Respository
                 Conexao.Close();
                 Conexao = null;
             }
-        }
 
-        public void FechaConexaoSqlite()
-        {
             if (ConexaoSqlite != null && ConexaoSqlite.State == ConnectionState.Open)
             {
                 ConexaoSqlite.Close();
@@ -63,6 +60,7 @@ namespace CircuitBreakerTestAPI.Respository
         public void Dispose()
         {
             Conexao?.Dispose();
+            ConexaoSqlite?.Dispose();
         }
     }
 }

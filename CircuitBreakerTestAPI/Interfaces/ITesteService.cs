@@ -5,7 +5,6 @@ namespace CircuitBreakerTestAPI.Interfaces
 {
     public interface ITesteService
     {
-        public Task<Usuario> TesteUsuario();
-        public Task<Usuario> TesteUsuarioSqlite();
+        public Task<Usuario> TesteUsuario(Analise analise);
     }
 }

@@ -5,7 +5,7 @@ namespace CircuitBreakerTestAPI.Interfaces
 {
     public interface ITesteRepository
     {
-        public Task<Usuario> TesteUsuario();
+        public Task<bool> TesteUsuario(Analise analise);
 
     }
 }
